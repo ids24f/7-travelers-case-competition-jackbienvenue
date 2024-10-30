@@ -304,10 +304,16 @@ Note that we will make the following changes to the dataset:
     -
 - newest_veh_age
     - Convert entries of -20 to NaN
-- pay_typ_c
+- pay_type_code 
+    - Create dummy variables with 'type1' as baseline
+- product_sbtyp
+    - Create dummy variables with 'A' as baseline
+- prdct_sbtyp_grp 
     - Create dummy variables with 'type1' as baseline
 - pri_carrier
     - Already binary, 1 indicates that the customer came from prior carrier
+- trm_len_mo
+    - Convert to binary, 12 month -> 0, 6 month -> 1
 
 
 
