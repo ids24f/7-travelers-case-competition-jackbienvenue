@@ -23,7 +23,7 @@ Before touching the data though, let's begin by inspecting the present columns b
 import matplotlib.pyplot as plt
 import pandas as pd
 from prettytable import PrettyTable
-import agate
+import numpy as np
 
 # Next, import data:
 
@@ -65,10 +65,11 @@ table = PrettyTable() # Instantiate table
 
 table.field_names = ["Column Name", "Data Type"] 
 
-# Add rows to the table
+## Add rows to the table
 for column, dtype in d_types.itertuples(index=True):
     table.add_row([column, dtype])
 
+## Printout
 print(table)
 
 ```
@@ -85,15 +86,75 @@ Let's get into it:
 
 *Printout 2.1 - Unique Values:*
 
-Are there any missing values in the entire dataframe?:
+Here, we will examine unique values based upon the combined training set and test set to make sure we don't accidentally process the data in a way where we filter out values that are absent in the training set but present in the test set. 
+
 ```{python}
 #| echo: False
 
-## First, check for any missing values at all
+# We will construct a printout table in this section
+
+## First, let's get the concatenated complete data:
+
+complete_df = pd.concat([training_df, test_df])
+
+## Define unique counts:
+
+unique_counts = complete_df.nunique()
+
+table = PrettyTable() # Instantiate table
+table.field_names = ['Column Name', 'Unique Values Count']
+
+## Add entries
+
+for column in unique_counts.index:
+    table.add_row([column, unique_counts[column]])
+
+## Show
+print(table)
 
 ```
 
+Now, for the datasets with a small number of unique values, let's examine what those unique values are:
+
+``` {python}
+#| echo: false
+
+## For print formatting:
+    ## Abbreviate longest column names
+
+complete_df2 = complete_df.rename(
+    columns={'digital_contact_ind': 'dig_cont_ind',
+             'has_prior_carrier': 'pri_carrier',
+             'household_group': 'household_g',
+             'prdct_sbtyp_grp': 'pr_sbtyp_g',
+             'pol_edeliv_ind': 'edeliv_ind',
+             'bi_limit_group': 'bi_lim_g',
+             'telematics_ind': 'telm_ind',
+             'pay_type_code': 'pay_typ_c',
+             'product_sbtyp': 'prdct_sbtyp'
+    }
+)
+
+unique_counts2 = complete_df2.nunique()
+
+## Pick out columns with less than 10 unique values
+columns_with_few_unique = unique_counts2[unique_counts2 < 10].index
+
+table = PrettyTable() # Instantiate table
+table.field_names = ["Column Name", "Unique Values"] # Set fields
+
+## Add rows to the table for each qualifying column
+for column in columns_with_few_unique:
+    unique_values = complete_df2[column].unique()
+    table.add_row([column, ', '.join(map(str, unique_values))])
+
+## Print table
+print(table)
+```
+
 *Printout 2.2 - Missing Values:*
+
+Are there any missing values in the entire dataframe?:
 
 ``` {python}
 #| echo: False
@@ -114,19 +175,52 @@ This is a good start, however if we stopped here, we'd be forgetting something. 
 ``` {python}
 #| echo: false
 
-column_names = training_df.columns.tolist
+## Column names as list
+column_names = complete_df.columns.tolist()
+
+## Remove IDs for this exercise
+s_column_names = column_names[1:]
+
+## Arrange to sync to the special formatting:
+ordered_columns = [
+    'ann_prm_amt',
+    'bi_limit_group',
+    'channel',
+    'newest_veh_age',
+    'geo_group',
+    'has_prior_carrier',
+    'home_lot_sq_footage',
+    'household_group',
+    'household_policy_counts',
+    'telematics_ind',
+    'digital_contact_ind',
+    '12m_call_history',
+    'tenure_at_snapshot',
+    'pay_type_code',
+    'acq_method',
+    'trm_len_mo',
+    'pol_edeliv_ind',
+    'prdct_sbtyp_grp',
+    'product_sbtyp',
+    'call_counts'
+]
+
+## Reorder the DataFrame
+ordered_complete_df = complete_df[ordered_columns]
+
+s_column_names_sorted = [col for col in ordered_columns if col in s_column_names]
 
 special_missing_format = {
-    'Column Name': [column_names]
+    'Column Name': s_column_names_sorted,
     'Special Format': ['No', 'No', 'No', 'Yes', 
                         'No', 'No', 'No', 'No',
                         'No', 'Yes', 'No', 'No',
-                        'No', 'No', 'No', 'No',
                         'No', 'No', 'Yes', 'No',
-                        'No', 'No'
+                        'Yes', 'No', 'No', 'No'
                         ]
 }
 
+## Turn into df
 special_df = pd.DataFrame(special_missing_format)
 
 table = PrettyTable() # Instantiate table 
@@ -134,18 +228,46 @@ table = PrettyTable() # Instantiate table
 table.field_names = ["Column Name", "Special Format"] 
 
 # Add rows to the table
-for column, dtype in d_types.itertuples(index=True):
-    table.add_row([column, dtype])
+for row in special_df.itertuples(index=True):
+    table.add_row([row._1, row._2])
 
 print(table)
+
 ```
 
 # Data Cleaning
 
+We now have a quite holistic view of the data we are working with. Now, we are able to start cleaning the columns which require cleaning.
+
 ``` {python} 
 #| echo: False
 
-# Here, we will clean & export the TEST dataset as well. 
+# Here, we will clean both the training and testing set individually,
+# and we will go on to export both individually.
 
+def travelers_data_cleaning(df):
+
+    ## Clean the bi_limit_group column:
+
+    df['bi_limit_group'] = df['bi_limit_group'].replace(-20, np.nan)
+
+    ## Clean the telematics_ind column:
+
+        ###FIXME!!! ????
+
+    ## Clean the acq_method column:
+
+    df['acq_method'] = df['acq_method'].replace('Miss', np.nan)
+
+    ## Clean the pol_edeliv_ind column:
+
+    df['pol_edeliv_ind'] = df['pol_edeliv_ind'].replace(-2, np.nan)
+
+    return clean_df
+
+```
+
+``` {python}
+#| echo: False
 
 ```
