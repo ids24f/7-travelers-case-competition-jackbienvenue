@@ -1,0 +1,151 @@
+---
+title: STAT3255 - Traveler's Case Competition
+author: Jack Bienvenue
+format: html
+---
+
+# Pre-cleaning Evaluation
+
+Before we begin working with the Traveler's dataset, we will clean it.
+
+It happens that many of the fields in the dataset are filled with some idiosyncratic conventions, such as missing values being entered as "Miss" in one of the dataset's columns.
+
+Before touching the data though, let's begin by inspecting the present columns by printing samples from them and checking data types.
+
+**Printout 1 - Data Sample & Data Types:**
+
+*Printout 1.1 - Data Sample*
+``` {python}
+#| echo: False
+
+# First, import packages:
+
+import matplotlib.pyplot as plt
+import pandas as pd
+from prettytable import PrettyTable
+import agate
+
+# Next, import data:
+
+training_df = pd.read_csv("data/train_data.csv")
+test_df = pd.read_csv("data/test_data.csv")
+
+# Finally, print data head and dtypes:
+
+## Print head
+
+def print_dataframe_in_chunks(df, chunk_size=4): #Fxn for output niceness
+    ## Ierate over the columns in chunks
+    for start in range(0, len(df.columns), chunk_size):
+        end = start + chunk_size
+        
+        table = PrettyTable() #create prettytable object
+        
+        table.field_names = df.columns[start:end].tolist()
+        
+        for row in df.head().itertuples(index=False):
+            table.add_row(row[start:end])
+        
+        ## Print the table
+        print(table)
+        print()
+
+print_dataframe_in_chunks(training_df)
+
+```
+
+*Printout 1.2 - Datatypes*
+``` {python}
+#| echo: False
+
+## Print datatypes nicely
+d_types = pd.DataFrame(training_df.dtypes, columns=['Data Type'])
+
+table = PrettyTable() # Instantiate table 
+
+table.field_names = ["Column Name", "Data Type"] 
+
+# Add rows to the table
+for column, dtype in d_types.itertuples(index=True):
+    table.add_row([column, dtype])
+
+print(table)
+
+```
+
+From our outputs, we find that we are working with a variety of data types and formats. 
+
+For two more checks before we start remedying problems, we need to know just a little more about the content of each column. This is important because from our printing, it looks as though some columns like can be "prdct_sbtyp_grp" can be converted to a binary variable, but there might actually be far more options than we know about. Our first check will be checking the unique values.
+
+We also want to consider missing values for each column. We might find that some predictors may not be able to be used in practice for modeling, or that we may be able to fill in missing values.
+
+Let's get into it:
+
+**Printout 2 - Unique and Missing Values:**
+
+*Printout 2.1 - Unique Values:*
+
+Are there any missing values in the entire dataframe?:
+```{python}
+#| echo: False
+
+## First, check for any missing values at all
+
+```
+
+*Printout 2.2 - Missing Values:*
+
+``` {python}
+#| echo: False
+
+if training_df.isnull().values.any():
+    print("Training Set: There are missing values in the DataFrame.")
+else:
+    print("Training Set: No missing values in the DataFrame.")
+
+if test_df.isnull().values.any():
+    print("Testing Set: There are missing values in the DataFrame.")
+else:
+    print("Testing Set: No missing values in the DataFrame.")
+```
+
+This is a good start, however if we stopped here, we'd be forgetting something. As mentioned on the [Kaggle data page for the competition](https://www.kaggle.com/competitions/2024-travelers-umc-u-conn/data), there are some individualized conventions for missing values in each column. 
+
+``` {python}
+#| echo: false
+
+column_names = training_df.columns.tolist
+
+special_missing_format = {
+    'Column Name': [column_names]
+    'Special Format': ['No', 'No', 'No', 'Yes', 
+                        'No', 'No', 'No', 'No',
+                        'No', 'Yes', 'No', 'No',
+                        'No', 'No', 'No', 'No',
+                        'No', 'No', 'Yes', 'No',
+                        'No', 'No'
+                        ]
+}
+
+special_df = pd.DataFrame(special_missing_format)
+
+table = PrettyTable() # Instantiate table 
+
+table.field_names = ["Column Name", "Special Format"] 
+
+# Add rows to the table
+for column, dtype in d_types.itertuples(index=True):
+    table.add_row([column, dtype])
+
+print(table)
+```
+
+# Data Cleaning
+
+``` {python} 
+#| echo: False
+
+# Here, we will clean & export the TEST dataset as well. 
+
+
+```
