@@ -172,6 +172,8 @@ else:
 
 This is a good start, however if we stopped here, we'd be forgetting something. As mentioned on the [Kaggle data page for the competition](https://www.kaggle.com/competitions/2024-travelers-umc-u-conn/data), there are some individualized conventions for missing values in each column. 
 
+Let's observe for which columns this is true:
+
 ``` {python}
 #| echo: false
 
@@ -247,13 +249,17 @@ We now have a quite holistic view of the data we are working with. Now, we are a
 
 def travelers_data_cleaning(df):
 
-    ## Clean the bi_limit_group column:
+    # Step 1: Cleaning unusual conventions for missing values
 
-    df['bi_limit_group'] = df['bi_limit_group'].replace(-20, np.nan)
+    ## Clean the newest_veh_age column:
+
+    df['newest_veh_age'] = df['newest_veh_age'].replace(-20, np.nan)
 
     ## Clean the telematics_ind column:
 
-        ###FIXME!!! ????
+    df['telematics_ind'] = df['telematics_ind'].replace(0, np.nan)
+
+        ### FIXME! How to treat '-2' non-auto types?
 
     ## Clean the acq_method column:
 
@@ -263,9 +269,47 @@ def travelers_data_cleaning(df):
 
     df['pol_edeliv_ind'] = df['pol_edeliv_ind'].replace(-2, np.nan)
 
+
+    # Step 2: Making binary 
+
+    # Step 3: Getting dummies for categorical variables:
+
+    ## 
+
+
+    # Step 4:
+
     return clean_df
 
 ```
+
+Note that we will make the following changes to the dataset:
+
+- acq_method
+    - !!!!!!!!!!!!!!!!!!!!!
+    -
+- bi_limit_group
+    - !!!!!!!!!!!!!!!!!!!!!
+    - 
+- channel
+    - Convert to binary, with 'Retail' as 1, 'Others' as 0. 
+- dig_cont_ind
+    - Already binary, 1 if customer *has* opted into digital communications
+- edeliv_ind
+    - 
+- geo_group
+    - Create dummy variables with 'rural' as baseline
+- household_g
+    - !!!!!!!!!!!!!!!!!!!!!
+    -
+- newest_veh_age
+    - Convert entries of -20 to NaN
+- pay_typ_c
+    - Create dummy variables with 'type1' as baseline
+- pri_carrier
+    - Already binary, 1 indicates that the customer came from prior carrier
+
+
 
 ``` {python}
 #| echo: False
