@@ -7,14 +7,17 @@ format: html
 ``` {python}
 #| echo: false
 
-# Package import
-import lightgbm as lgb
+## Package import
+import lightgbm as lgbm
 import numpy as np
 import pandas as pd
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import accuracy_score
+from sklearn.metrics import mean_squared_error
 
-
+## Import clean data
+train_df = pd.read_csv('data/clean_training_data.csv')
+test_df = pd.read_csv('data/clean_testing_data.csv')
 ```
 
 Time for the fun part of this competition, that is, doing the modeling!
@@ -38,6 +41,44 @@ We will try this, and in addition we will consider simpler models. Sometimes sim
 ``` {python}
 #| echo: false
 
+# Initial tuning of parameters, data prep
+
+params = {
+    'objective': 'multiclass',
+    'num_class': 3,
+    'metric': 'multi_logloss',
+    'learning_rate': 0.1,
+    'num_leaves': 31,
+    'max_depth': -1,
+}
+
+## Set X_train, y_train, X_test, y_test
+
+X_train = train_df.drop(columns=['call_counts'])
+y_train = train_df['call_counts']
+X_test = test_df.drop(columns=['call_counts'])
+y_test = test_df['call_counts']
+
+## Create LightGBM dataset objects
+train_data = lgbm.Dataset(X_train, label=y_train)
+test_data = lgbm.Dataset(X_test, label=y_test, reference=train_data)
+
+# Begin Modeling
+
+num_round = 100  # Number of boosting rounds
+bst = lgb.train(
+    params,
+    train_data,
+    num_round,
+    valid_sets=[test_data],      # Use the test set for validation
+    early_stopping_rounds=10     # Stop if no improvement after 10 rounds
+)
+
+y_pred = bst.predict(X_test, num_iteration=bst.best_iteration)
+
+rmse = np.sqrt(mean_squared_error(y_test, y_pred))
+print(f'RMSE: {rmse:.2f}')
 ```
 
 # GLM
+
