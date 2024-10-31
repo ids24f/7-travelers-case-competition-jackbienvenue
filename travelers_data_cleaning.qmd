@@ -8,7 +8,7 @@ format: html
 
 Before we begin working with the Traveler's dataset, we will clean it.
 
-It happens that many of the fields in the dataset are filled with some idiosyncratic conventions, such as missing values being entered as "Miss" in one of the dataset's columns.
+It happens that many of the fields in the dataset are filled with some idiosyncratic conventions, such as missing values being entered as "-20" in one of the dataset's columns.
 
 Before touching the data though, let's begin by inspecting the present columns by printing samples from them and checking data types.
 
@@ -113,6 +113,8 @@ for column in unique_counts.index:
 print(table)
 
 ```
+
+Note that there are 100,000 entries between the training set and test set, split into 80,000 and 20,000, respectively. The 'id' field only shows 80,000 unique values because in the test set, the IDs are given as numbers 1-20,000 instead of 80,001 through 100,000.
 
 Now, for the datasets with a small number of unique values, let's examine what those unique values are:
 
@@ -247,6 +249,24 @@ We now have a quite holistic view of the data we are working with. Now, we are a
 # Here, we will clean both the training and testing set individually,
 # and we will go on to export both individually.
 
+## First, a convenience function for dummy
+## variable creation with specified reference
+def create_dummies_with_reference(df, column, reference):
+
+    ## Create dummy variables
+    dummies = pd.get_dummies(df[column], prefix=column)
+    
+    ## Drop the reference category
+    if f'{column}_{reference}' in dummies.columns:
+        dummies = dummies.drop(f'{column}_{reference}', axis=1)
+    
+    ## Combine with the original DataFrame (excluding the original categorical column)
+    df_final = pd.concat([df.drop(column, axis=1), dummies], axis=1)
+    
+    return df_final
+
+## Now, we'll build our big cleaning function:
+
 def travelers_data_cleaning(df):
 
     # Step 1: Cleaning unusual conventions for missing values
@@ -268,14 +288,77 @@ def travelers_data_cleaning(df):
     ## Clean the pol_edeliv_ind column:
 
     df['pol_edeliv_ind'] = df['pol_edeliv_ind'].replace(-2, np.nan)
+    df['pol_edeliv_ind'] = df['pol_edeliv_ind'].replace(-1, np.nan)
 
 
-    # Step 2: Making binary 
+    # Step 2: Making qualifying fields binary
+
+    ## Binary conversion of 'channel'
+    df['channel'] = df['channel'].replace('Retail', 1)
+
+    df['channel'] = df['channel'].replace('Others', 0)
+
+    ## Binary converstion of trm_len_mo
+
+    df['trm_len_mo'] = df['trm_len_mo'].replace('12', 0)
+
+    df['trm_len_mo'] = df['trm_len_mo'].replace('6', 1)
 
     # Step 3: Getting dummies for categorical variables:
 
-    ## 
+    ## dummies for acq_method
 
+    df = create_dummies_with_reference(df, 'acq_method', 'method1')
+
+    ## dummies for bi_limit_group
+
+    data = {
+    'bi_lim_g': ['NonAuto', 'SPGrp1Miss', 'SPGrp2', 'CSLGrp2', 
+                 'CSLGrp1', 'SPGrp3', 'SPGrp4', 'CSLGrp3']
+    }
+    df = pd.DataFrame(data)
+
+    ### Define a mapping for the values
+    mapping = {
+        'NonAuto': 'NonAuto',
+        'SPGrp1Miss': 'SP',
+        'SPGrp2': 'SP',
+        'CSLGrp2': 'CSL',
+        'CSLGrp1': 'CSL',
+        'SPGrp3': 'SP',
+        'SPGrp4': 'SP',
+        'CSLGrp3': 'CSL'
+    }
+
+    ### Replace values in the column using the mapping
+    df['bi_lim_g'] = df['bi_lim_g'].map(mapping)
+
+    ### Now create dummy variables
+    dummies = pd.get_dummies(df['bi_lim_g'], prefix='bi_lim_g')
+
+    ### Combine with the original DataFrame
+    df_final = pd.concat([df.drop('bi_lim_g', axis=1), dummies], axis=1)
+
+
+    ## dummies for geo_group
+
+    df = create_dummies_with_reference(df, 'geo_group', 'rural')
+
+    ## household_group 
+
+    df = create_dummies_with_reference(df, 'household_group', '1dwelling')
+
+    ## pay_type_code
+
+    df = create_dummies_with_reference(df, 'pay_type_code', 'type1')
+
+    ## product_sbtyp
+
+    df = create_dummies_with_reference(df, 'product_sbtyp', 'A')
+
+    ## prdct_sbtyp_grp
+
+    df = create_dummies_with_reference(df, 'prdct_sbtyp_grp', 'type1')
 
     # Step 4:
 
@@ -285,37 +368,40 @@ def travelers_data_cleaning(df):
 
 Note that we will make the following changes to the dataset:
 
-- acq_method
-    - !!!!!!!!!!!!!!!!!!!!!
-    -
-- bi_limit_group
-    - !!!!!!!!!!!!!!!!!!!!!
-    - 
-- channel
+- **acq_method**
+    - Create dummies with 'method1' serving as baseline
+    - Replace 'missing' with NaN
+        - NOTE: 20% of values are missing
+- **bi_limit_group**
+    - Create dummies for just NonAuto, SP, and CSL
+- **channel**
     - Convert to binary, with 'Retail' as 1, 'Others' as 0. 
-- dig_cont_ind
+- **dig_cont_ind**
     - Already binary, 1 if customer *has* opted into digital communications
-- edeliv_ind
-    - 
-- geo_group
+- **geo_group**
     - Create dummy variables with 'rural' as baseline
-- household_g
-    - !!!!!!!!!!!!!!!!!!!!!
-    -
-- newest_veh_age
+- **household_group**
+    - Create dummies, '1dwelling' as baseline
+- **newest_veh_age**
     - Convert entries of -20 to NaN
-- pay_type_code 
+- **pay_type_code**
     - Create dummy variables with 'type1' as baseline
-- product_sbtyp
+- **pol_edeliv_ind**
+    - 1 indicates email delivery of documents, 0 is paper delivery.
+    - **Replace missing indicator '-2' with NaN**
+        - **Additionally, replace meaningless '1' with NaN**
+- **product_sbtyp**
     - Create dummy variables with 'A' as baseline
-- prdct_sbtyp_grp 
+- **prdct_sbtyp_grp**
     - Create dummy variables with 'type1' as baseline
-- pri_carrier
+- **pri_carrier**
     - Already binary, 1 indicates that the customer came from prior carrier
-- trm_len_mo
+- **telematics_ind**
+    - Replace existing missing value '0' with NaN
+- **trm_len_mo**
     - Convert to binary, 12 month -> 0, 6 month -> 1
 
-
+Now, before moving on to modeling, let's check on the count of missing values in the fields that may have them. 
 
 ``` {python}
 #| echo: False
