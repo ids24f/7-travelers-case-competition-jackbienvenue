@@ -406,7 +406,7 @@ Note that we will make the following changes to the dataset:
 - **trm_len_mo**
     - Convert to binary, 12 month -> 0, 6 month -> 1
 
-Now, let's attempt our data cleaning using a function defined in the source code for the specific cleaning of this dataset.
+Now, we will use our cleaning function and export our newly cleaned datasets. 
 
 ``` {python}
 #| echo: False
