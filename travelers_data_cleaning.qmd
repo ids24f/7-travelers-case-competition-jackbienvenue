@@ -421,6 +421,6 @@ clean_test_df = travelers_data_cleaning(test_df)
 #| echo: False
 
 ## Export dataframes for use in modeling script
-clean_training_df.to_csv('data/clean_training_data.csv')
-clean_test_df.to_csv('data/clean_testing_data.csv')
+clean_training_df.to_csv('data/clean_training_data.csv', index=False)
+clean_test_df.to_csv('data/clean_testing_data.csv', index=False)
 ```
