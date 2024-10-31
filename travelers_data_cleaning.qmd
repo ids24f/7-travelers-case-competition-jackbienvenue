@@ -1,5 +1,5 @@
 ---
-title: STAT3255 - Traveler's Case Competition
+title: STAT3255 - Traveler's Case Competition - Cleaning
 author: Jack Bienvenue
 format: html
 ---

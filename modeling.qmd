@@ -1,0 +1,43 @@
+---
+title: STAT3255 - Traveler's Case Competition - Modeling
+author: Jack Bienvenue
+format: html
+---
+
+``` {python}
+#| echo: false
+
+# Package import
+import lightgbm as lgb
+import numpy as np
+import pandas as pd
+from sklearn.model_selection import train_test_split
+from sklearn.metrics import accuracy_score
+
+
+```
+
+Time for the fun part of this competition, that is, doing the modeling!
+
+# Strategy
+
+For any competition, it is important to go in with a strategy. Every competition has its rules, and we can use these to our advantage. On the [Kaggle page](https://www.kaggle.com/competitions/2024-travelers-umc-u-conn/overview), it is mentioned that the *baseline* model, our model to beat, is an untuned LightGBM model:
+
+::: {.callout}
+"**Benchmark Model:**
+
+The benchmark will be LightGBM model without any tuning or feature manipulation. We will provide it before the first optional submission."
+:::
+
+Given that we know the type of baseline model and we know that it is *untuned*, this presents an opportunity for what should be a surefire beat of the benchmark model if we replicate the baseline method *with* tuning. 
+
+We will try this, and in addition we will consider simpler models. Sometimes simpler models might help us achieve comparable or better results in a much simpler way. We will try out a GLM to do this because we know that the data is heavy-tailed with many entries of $0$ for the call count response.
+
+# LightGBM with Tuning
+
+``` {python}
+#| echo: false
+
+```
+
+# GLM
