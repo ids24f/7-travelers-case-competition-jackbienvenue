@@ -15,6 +15,7 @@ from sklearn.model_selection import train_test_split
 from sklearn.metrics import accuracy_score
 from sklearn.metrics import mean_squared_error
 from sklearn.model_selection import GridSearchCV
+import statsmodels.api as sm
 
 ## Import clean data
 train_df = pd.read_csv('data/clean_training_data.csv')
@@ -41,6 +42,7 @@ We will try this, and in addition we will consider simpler models. Sometimes sim
 
 ``` {python}
 #| echo: false
+#| eval: false
 
 # Initial tuning of parameters, data prep
 
@@ -91,6 +93,7 @@ Now, let's run this with hyperparameter selection:
 
 ``` {python}
 #| echo: false
+#| eval: false
 
 # Now, ITERATIVE HYPERPARAMETER SELECTION!
 
@@ -127,6 +130,28 @@ print("Best RMSE:", -grid_search.best_score_)
 best_params = grid_search.best_params_
 final_model = lgbm.LGBMRegressor(**best_params)
 final_model.fit(X_train, y_train)
+```
+
+```{python}
+
+X = train_df.drop(columns=['call_counts'])
+y = train_df['call_counts']
+
+## Split data (80/20)
+X_train, X_test, y_train, y_test = (
+    train_test_split(X, y, test_size=0.2, random_state=3255)
+)
+
+best_params = {
+    'learning_rate': 0.1,
+    'max_depth': -1,
+    'min_child_samples': 30,
+    'num_leaves': 31,
+    'subsample': 0.6
+}
+
+final_model = lgbm.LGBMRegressor(**best_params)
+final_model.fit(X_train, y_train)
 
 ## Predict and evaluate
 y_pred = final_model.predict(X_test)
@@ -145,11 +170,133 @@ predictions = final_model.predict(test_df)
 
 ## Create output DataFrame with 'id' and predicted 'call_counts'
 output_df = test_df[['id']].copy()  # Copy the 'id' column
-output_df['call_counts'] = predictions  # Add predictions
+output_df['Predict'] = predictions  # Add predictions
 
 ## Output predictions:
-output_df.to_csv('data/upgraded_gbm_predictions.csv', index=False)
+output_df.to_csv('predictions/new_gbm_predictions.csv', index=False)
 ```
 
-# GLM
 
+Output from optimization trial:
+
+[LightGBM] [Info] Auto-choosing row-wise multi-threading, the overhead of testing was 0.005956 seconds.
+You can set `force_row_wise=true` to remove the overhead.
+And if memory is not enough, you can set `force_col_wise=true`.
+[LightGBM] [Info] Total Bins 1247
+[LightGBM] [Info] Number of data points in the train set: 64000, number of used features: 33
+[LightGBM] [Info] Start training from score 25.844641
+Best Hyperparameters: {'learning_rate': 0.1, 'max_depth': -1, 'min_child_samples': 30, 'num_leaves': 31, 'subsample': 0.6}
+Best RMSE: 36.09774244904193
+[LightGBM] [Info] Auto-choosing row-wise multi-threading, the overhead of testing was 0.005309 seconds.
+You can set `force_row_wise=true` to remove the overhead.
+And if memory is not enough, you can set `force_col_wise=true`.
+[LightGBM] [Info] Total Bins 1247
+[LightGBM] [Info] Number of data points in the train set: 64000, number of used features: 33
+[LightGBM] [Info] Start training from score 25.844641
+Final RMSE: 35.93
+
+# GLM (Poisson)
+
+``` {python}
+# Define the features and target
+X = train_df.drop(columns=['call_counts', 'newest_veh_age'])  # Drop both target and unwanted column
+y = train_df['call_counts']
+
+# Drop rows with missing values in 'pol_edeliv_ind' and 'telematics_ind'
+X = X.dropna(subset=['pol_edeliv_ind', 'telematics_ind'])
+
+# Align y with the remaining rows in X
+y = y[X.index]
+
+# Add a constant for the intercept
+X = sm.add_constant(X)
+```
+
+```{python}
+test_df = sm.add_constant(test_df, has_constant='add')
+test_df = test_df[X.columns]
+
+# Define the probabilities and corresponding values
+pol_edeliv_values = [0.0, 1.0]
+pol_edeliv_probs = [0.540088, 0.459912]
+
+telematics_values = [-2.0, -1.0, 1.0]
+telematics_probs = [0.798611, 0.102403, 0.098986]
+
+# Assign missing values for 'pol_edeliv_ind' based on the defined probabilities
+missing_pol_edeliv = test_df['pol_edeliv_ind'].isnull()
+test_df.loc[missing_pol_edeliv, 'pol_edeliv_ind'] = np.random.choice(
+    pol_edeliv_values, 
+    size=missing_pol_edeliv.sum(), 
+    p=pol_edeliv_probs
+)
+
+# Assign missing values for 'telematics_ind' based on the defined probabilities
+missing_telematics = test_df['telematics_ind'].isnull()
+test_df.loc[missing_telematics, 'telematics_ind'] = np.random.choice(
+    telematics_values, 
+    size=missing_telematics.sum(), 
+    p=telematics_probs
+)
+
+print("Missing values in X:\n", X.isnull().sum())
+print("Missing values in y:", y.isnull().sum())
+print("Missing values in test:", test_df.isnull().sum())
+
+boolean_columns = ['bi_limit_group_CSL', 'bi_limit_group_NonAuto', 'bi_limit_group_SP']  # Update this list with your actual boolean columns
+
+X[boolean_columns] = X[boolean_columns].apply(lambda x: x.astype(int))
+test_df[boolean_columns] = test_df[boolean_columns].apply(lambda x: x.astype(int))
+
+print(X.dtypes)
+print(test_df.dtypes)
+
+
+# Fit the model
+poisson_model = sm.GLM(y, X, family=sm.families.Poisson()).fit()
+
+print(poisson_model.summary())
+
+predictions = poisson_model.predict(test_df)
+
+## Create output DataFrame with 'id' and predicted 'call_counts'
+output_df = test_df[['id']].copy()  # Copy the 'id' column
+output_df['Predict'] = predictions  # Add predictions
+
+print(output_df)
+
+## Output predictions:
+output_df.to_csv('predictions/poisson_predictions.csv', index=False)
+```
+
+``` {python}
+# Penalty model:
+
+## First 60% of predictions -> 0
+## Last 40%, scale 
+
+```
+
+``` {python}
+#| eval: false
+
+def relative_gini(actual, pred):
+    # Sort by predicted values, keeping track of actual values
+    sorted_indices = np.argsort(pred)
+    sorted_actual = np.array(actual)[sorted_indices]
+    
+    # Cumulative sum of actual values and a baseline
+    cum_actual = np.cumsum(sorted_actual)
+    cum_index = np.cumsum(np.ones_like(sorted_actual))
+    
+    # Compute Gini for predictions
+    gini_pred = (np.sum(cum_actual / cum_actual[-1]) - (cum_index[-1] + 1) / 2) / cum_index[-1]
+    
+    # Compute Gini for perfect model (actual values sorted by themselves)
+    sorted_actual_perfect = np.sort(actual)
+    cum_actual_perfect = np.cumsum(sorted_actual_perfect)
+    gini_actual = (np.sum(cum_actual_perfect / cum_actual_perfect[-1]) - (cum_index[-1] + 1) / 2) / cum_index[-1]
+    
+    # Return the relative Gini coefficient
+    return gini_pred / gini_actual if gini_actual != 0 else 0
+```
